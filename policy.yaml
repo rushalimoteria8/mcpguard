@@ -1,0 +1,18 @@
+version: "1.0"
+workspace_root: "/app/data/safe_zone"
+
+agent_permissions:
+  admin_agent:
+    - write_file
+    - read_file
+  guest_agent:
+    - read_file
+
+allowed_tools:
+  read_file:
+    arguments:
+      file_path: string
+  write_file:
+    arguments:
+      file_path: string
+      content: string
