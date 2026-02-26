@@ -1,5 +1,5 @@
 version: "1.0"
-workspace_root: "/app/data/safe_zone"
+workspace_root: "./test_sandbox"
 
 agent_permissions:
   admin_agent:

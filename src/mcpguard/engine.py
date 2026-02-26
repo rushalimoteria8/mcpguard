@@ -13,6 +13,9 @@ class SecurityEngine:
         #use "resolve" to calculate the absolute path
         self.workspace_root = Path(self.policy.get("workspace_root")).expanduser().resolve()
 
+        if not self.workspace_root.exists():
+            print(f"[!] Warning: Workspace root '{self.workspace_root}' does not exist on this machine.")
+
     def _validate_policy_structure(self):
         """
         Ensures the YAML contains the minimum required fields for MCPGuard.
