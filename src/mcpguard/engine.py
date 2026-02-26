@@ -11,7 +11,7 @@ class SecurityEngine:
         
         #extracting the workspace root
         #use "resolve" to calculate the absolute path
-        self.workspace_root = Path(self.policy.get("workspace_root")).resolve()
+        self.workspace_root = Path(self.policy.get("workspace_root")).expanduser().resolve()
 
     def _validate_policy_structure(self):
         """
@@ -19,6 +19,11 @@ class SecurityEngine:
         """
         if "workspace_root" in self.policy and not isinstance(self.policy["workspace_root"], str):
             print("[!] Configuration Error: 'workspace_root' must be a string path.")
+            sys.exit(1)
+
+        permissions = self.policy.get("agent_permissions")
+        if permissions and not isinstance(permissions, dict):
+            print(f"\n[!] Configuration Error: 'agent_permissions' must be a dictionary, got {type(permissions).__name__}.")
             sys.exit(1)
 
         required_keys = ["version", "workspace_root", "agent_permissions"]
@@ -45,4 +50,4 @@ class SecurityEngine:
         """
         Helper to see what a specific agent is allowed to do.
         """
-        return self.policy.get("agent_permissions", {}).get(agent_name, [])
+        return self.policy.get("agent_permissions", {}).get(agent_name) or []
