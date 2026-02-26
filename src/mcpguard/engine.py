@@ -51,3 +51,20 @@ class SecurityEngine:
         Helper to see what a specific agent is allowed to do.
         """
         return self.policy.get("agent_permissions", {}).get(agent_name) or []
+    
+    def is_path_safe(self, requested_path: str) -> bool:
+        """
+        Validates that a requested path is strictly within the allowed workspace_root.
+        Prevents directory traversal attacks (e.g., ../../etc/passwd).
+        """
+        try: 
+            requestedParsedPath = Path(requested_path).expanduser().resolve()
+
+            # Check if the requested file lives inside the allowed root directory
+            return requestedParsedPath.is_relative_to(self.workspace_root)
+
+        except Exception as e:
+            return False
+
+
+
