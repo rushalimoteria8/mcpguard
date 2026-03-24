@@ -114,7 +114,7 @@ class RequestValidator:
         tool_name = request.get("tool")
         arguments = request.get("parameters", {})
         
-        if not tool_name or not isinstance(arguments, dict):
+        if not isinstance(tool_name, str) or not tool_name.strip() or not isinstance(arguments, dict):
             return False, "MALFORMED_REQUEST"
 
         if not self._check_rbac(agent_id, tool_name):

@@ -102,6 +102,9 @@ class PolicyLoader:
     def _validate_top_level_structure(self, policy: dict[str, Any]) -> None:
         self._require_type(policy, "version", str)
         self._require_type(policy, "workspace_root", str)
+        if not policy["workspace_root"].strip():
+            raise ValueError("'workspace_root' must be a non-empty string.")
+
         self._require_type(policy, "agent_permissions", dict)
         self._require_type(policy, "allowed_tools", dict)
 
@@ -114,8 +117,8 @@ class PolicyLoader:
         if "rate_limits" in policy and not isinstance(policy["rate_limits"], dict):
             raise TypeError("'rate_limits' must be a dictionary.")
 
-        self._validate_agent_permissions(policy["agent_permissions"])
         self._validate_tool_schemas(policy["allowed_tools"])
+        self._validate_agent_permissions(policy["agent_permissions"], policy["allowed_tools"])
         self._validate_routing_endpoints(policy.get("routing_endpoints", {}))
         self._validate_redaction_patterns(policy.get("redaction_patterns", []))
         self._validate_rate_limits(policy.get("rate_limits", {}))
@@ -129,20 +132,30 @@ class PolicyLoader:
                 f"Configuration key '{key}' must be of type {expected_type.__name__}."
             )
 
-    def _validate_agent_permissions(self, agent_permissions: dict[str, Any]) -> None:
-        for agent_id, allowed_tools in agent_permissions.items():
+    def _validate_agent_permissions(
+        self,
+        agent_permissions: dict[str, Any],
+        allowed_tools: dict[str, Any],
+    ) -> None:
+        for agent_id, agent_tools in agent_permissions.items():
             if not isinstance(agent_id, str) or not agent_id.strip():
                 raise TypeError("Each agent ID in 'agent_permissions' must be a non-empty string.")
 
-            if not isinstance(allowed_tools, list):
+            if not isinstance(agent_tools, list):
                 raise TypeError(
                     f"'agent_permissions[{agent_id}]' must be a list of tool names."
                 )
 
-            for tool_name in allowed_tools:
+            for tool_name in agent_tools:
                 if not isinstance(tool_name, str) or not tool_name.strip():
                     raise TypeError(
                         f"Every tool listed for agent '{agent_id}' must be a non-empty string."
+                    )
+
+                if tool_name not in allowed_tools:
+                    raise ValueError(
+                        f"Agent '{agent_id}' references unknown tool '{tool_name}' "
+                        f"which is not defined in 'allowed_tools'."
                     )
 
     def _validate_tool_schemas(self, tool_schemas: dict[str, Any]) -> None:
@@ -177,6 +190,11 @@ class PolicyLoader:
                 raise TypeError(f"Tool '{tool_name}' field 'required' must be a list.")
 
             for arg_name in required:
+                if not isinstance(arg_name, str) or not arg_name.strip():
+                    raise TypeError(
+                        f"Tool '{tool_name}' field 'required' must contain only non-empty strings."
+                    )
+
                 if arg_name not in arguments:
                     raise ValueError(
                         f"Tool '{tool_name}' marks '{arg_name}' as required, but it is not "
@@ -188,6 +206,11 @@ class PolicyLoader:
                 raise TypeError(f"Tool '{tool_name}' field 'path_fields' must be a list.")
 
             for field_name in path_fields:
+                if not isinstance(field_name, str) or not field_name.strip():
+                    raise TypeError(
+                        f"Tool '{tool_name}' field 'path_fields' must contain only non-empty strings."
+                    )
+
                 if field_name not in arguments:
                     raise ValueError(
                         f"Tool '{tool_name}' path field '{field_name}' is not declared in "
@@ -204,7 +227,7 @@ class PolicyLoader:
             if not isinstance(tool_name, str) or not tool_name.strip():
                 raise TypeError("Each routing endpoint key must be a non-empty string.")
 
-            #Todo: check later when block C done
+            #todo: check later
             if not isinstance(endpoint, (str, dict)):
                 raise TypeError(
                     f"Routing endpoint for tool '{tool_name}' must be a string or dictionary."
@@ -212,7 +235,7 @@ class PolicyLoader:
 
     def _validate_redaction_patterns(self, redaction_patterns: list[Any]) -> None:
         for idx, pattern in enumerate(redaction_patterns):
-            # Keep this flexible for now since Block B outbound redaction is still planned.
+            #todo: check later
             if not isinstance(pattern, (str, dict)):
                 raise TypeError(
                     f"Redaction pattern at index {idx} must be a string or dictionary."
@@ -223,7 +246,7 @@ class PolicyLoader:
             if not isinstance(scope, str) or not scope.strip():
                 raise TypeError("Each 'rate_limits' key must be a non-empty string.")
 
-            #Todo: check again after limiter implemented
+            #todo: check later
             if not isinstance(rule, dict):
                 raise TypeError(f"Rate limit rule for '{scope}' must be a dictionary.")
 
