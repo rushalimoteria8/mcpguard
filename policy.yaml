@@ -1,5 +1,7 @@
 version: "1.0"
 workspace_root: "./test_sandbox"
+transport:
+  type: stdio
 
 agent_permissions:
   admin_agent:

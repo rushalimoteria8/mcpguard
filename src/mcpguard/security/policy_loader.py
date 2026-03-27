@@ -31,6 +31,7 @@ class PolicyLoader:
         self.agent_permissions: dict[str, list[str]] = {}
         self.tool_schemas: dict[str, dict[str, Any]] = {}
         self.workspace_root: str = ""
+        self.transport_config: dict[str, Any] = {}
         self.routing_endpoints: dict[str, Any] = {}
         self.redaction_patterns: list[Any] = []
         self.rate_limits: dict[str, Any] = {}
@@ -75,6 +76,13 @@ class PolicyLoader:
         self._ensure_loaded()
         return copy.deepcopy(self.routing_endpoints)
 
+    def get_transport_rules(self) -> dict[str, Any]:
+        """
+        Returns transport configuration for startup selection.
+        """
+        self._ensure_loaded()
+        return copy.deepcopy(self.transport_config)
+
     def get_redaction_rules(self) -> list[Any]:
         """
         Returns redaction patterns for the ResponseRedactor.
@@ -105,6 +113,7 @@ class PolicyLoader:
         if not policy["workspace_root"].strip():
             raise ValueError("'workspace_root' must be a non-empty string.")
 
+        self._require_type(policy, "transport", dict)
         self._require_type(policy, "agent_permissions", dict)
         self._require_type(policy, "allowed_tools", dict)
 
@@ -117,6 +126,7 @@ class PolicyLoader:
         if "rate_limits" in policy and not isinstance(policy["rate_limits"], dict):
             raise TypeError("'rate_limits' must be a dictionary.")
 
+        self._validate_transport_config(policy["transport"])
         self._validate_tool_schemas(policy["allowed_tools"])
         self._validate_agent_permissions(policy["agent_permissions"], policy["allowed_tools"])
         self._validate_routing_endpoints(policy.get("routing_endpoints", {}))
@@ -222,6 +232,31 @@ class PolicyLoader:
                         f"Tool '{tool_name}' path field '{field_name}' must have type 'string'."
                     )
 
+    def _validate_transport_config(self, transport: dict[str, Any]) -> None:
+        transport_type = transport.get("type")
+        if not isinstance(transport_type, str) or not transport_type.strip():
+            raise TypeError("'transport.type' must be a non-empty string.")
+
+        supported_transports = {"stdio", "http"}
+        if transport_type not in supported_transports:
+            supported = ", ".join(sorted(supported_transports))
+            raise ValueError(
+                f"Unsupported transport type '{transport_type}'. Supported types: {supported}"
+            )
+
+        if transport_type == "http":
+            host = transport.get("host")
+            port = transport.get("port")
+
+            if not isinstance(host, str) or not host.strip():
+                raise TypeError("'transport.host' must be a non-empty string for HTTP transport.")
+
+            if not isinstance(port, int) or isinstance(port, bool):
+                raise TypeError("'transport.port' must be an integer for HTTP transport.")
+
+            if not (1 <= port <= 65535):
+                raise ValueError("'transport.port' must be between 1 and 65535.")
+
     def _validate_routing_endpoints(self, routing_endpoints: dict[str, Any]) -> None:
         for tool_name, endpoint in routing_endpoints.items():
             if not isinstance(tool_name, str) or not tool_name.strip():
@@ -252,6 +287,7 @@ class PolicyLoader:
 
     def _populate_attributes(self, policy: dict[str, Any]) -> None:
         self.workspace_root = policy["workspace_root"]
+        self.transport_config = copy.deepcopy(policy["transport"])
         self.agent_permissions = copy.deepcopy(policy["agent_permissions"])
         self.tool_schemas = copy.deepcopy(policy["allowed_tools"])
         self.routing_endpoints = copy.deepcopy(policy.get("routing_endpoints", {}))
