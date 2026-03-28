@@ -39,6 +39,7 @@ async def main():
         transport = HttpTransport(
             host=transport_rules["host"],
             port=transport_rules["port"],
+            request_timeout_seconds=transport_rules["request_timeout_seconds"],
         )
     else:
         print(f"\n[!] Unsupported transport type: {transport_type}")

@@ -247,6 +247,7 @@ class PolicyLoader:
         if transport_type == "http":
             host = transport.get("host")
             port = transport.get("port")
+            request_timeout_seconds = transport.get("request_timeout_seconds")
 
             if not isinstance(host, str) or not host.strip():
                 raise TypeError("'transport.host' must be a non-empty string for HTTP transport.")
@@ -256,6 +257,18 @@ class PolicyLoader:
 
             if not (1 <= port <= 65535):
                 raise ValueError("'transport.port' must be between 1 and 65535.")
+
+            if not isinstance(request_timeout_seconds, (int, float)) or isinstance(
+                request_timeout_seconds, bool
+            ):
+                raise TypeError(
+                    "'transport.request_timeout_seconds' must be a number for HTTP transport."
+                )
+
+            if request_timeout_seconds <= 0:
+                raise ValueError(
+                    "'transport.request_timeout_seconds' must be greater than 0."
+                )
 
     def _validate_routing_endpoints(self, routing_endpoints: dict[str, Any]) -> None:
         for tool_name, endpoint in routing_endpoints.items():
