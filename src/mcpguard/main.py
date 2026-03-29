@@ -1,4 +1,5 @@
 import sys
+from routing import ToolRouter, UpstreamClient
 from security.policy_loader import PolicyLoader
 from security.request_validator import RequestValidator
 from transport import HttpTransport, StdioTransport
@@ -23,6 +24,7 @@ async def main():
 
     security_rules = loader.get_security_rules()
     transport_rules = loader.get_transport_rules()
+    routing_rules = loader.get_routing_rules()
 
     #validator object initialisation
     validator = RequestValidator(
@@ -45,7 +47,15 @@ async def main():
         print(f"\n[!] Unsupported transport type: {transport_type}")
         sys.exit(1)
 
-    proxy = MCPGuardProxy(transport=transport, validator=validator)
+    router = ToolRouter(routing_rules)
+    upstream_client = UpstreamClient()
+
+    proxy = MCPGuardProxy(
+        transport=transport,
+        validator=validator,
+        router=router,
+        upstream_client=upstream_client,
+    )
     
     await proxy.run()
 

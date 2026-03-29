@@ -2,22 +2,21 @@ import asyncio
 import logging
 from typing import Any
 
+from routing import RoutingError
+
+
 class MCPGuardProxy:
     """
     The Orchestrator (The Boss).
     Coordinates the flow of data between Transport, Security, Routing, and Telemetry.
     """
-    def __init__(self, transport, validator):
+    def __init__(self, transport, validator, router, upstream_client):
         # The Boss takes its tools via Dependency Injection
         self.transport = transport
         self.validator = validator
+        self.router = router
+        self.upstream_client = upstream_client
         self._background_tasks: set[asyncio.Task] = set()
-        
-        # We will inject these later as we build Blocks C and D!
-        # self.router = router
-        # self.upstream = upstream
-        # self.redactor = redactor
-        # self.logger = logger
 
     async def run(self):
         """The main 6-step asynchronous event loop."""
@@ -48,6 +47,7 @@ class MCPGuardProxy:
                 for task in list(self._background_tasks):
                     task.cancel()
                 await asyncio.gather(*self._background_tasks, return_exceptions=True)
+            await self.upstream_client.close()
             await self.transport.stop()
 
     async def process_request(self, request_id: Any | None, request: dict) -> None:
@@ -62,10 +62,10 @@ class MCPGuardProxy:
                 )
                 return
 
-            # --- STEP 3: Fetch (Block C: Routing) ---
-            # TODO: Replace with actual routing and HTTP client logic
-            print(f"Request safe. Routing to tool: {request.get('tool')}")
-            raw_data = {"status": "success", "data": "Mocked backend response from tool!"}
+            # route the request to correct upstream client
+            target = await self.router.resolve(request)
+            upstream_response = await self.upstream_client.forward(target, request)
+            raw_data = self._build_transport_response(upstream_response)
 
             # --- STEP 4: Clean (Block B: Redactor) ---
             # TODO: Replace with streaming regex redactor
@@ -78,9 +78,36 @@ class MCPGuardProxy:
             # --- STEP 6: Send (Block A: Transport) ---
             await self.transport.send_response(clean_data, request_id=request_id)
 
+        except RoutingError as exc:
+            logging.error(f"Routing failed: {exc}")
+            await self.transport.send_response(
+                {
+                    "status": "error",
+                    "error": str(exc),
+                    "_http_status": 502,
+                },
+                request_id=request_id,
+            )
+
         except Exception as e:
             logging.error(f"Fatal error while processing request: {e}")
             await self.transport.send_response(
-                {"error": "Internal proxy error"},
+                {
+                    "status": "error",
+                    "error": "Internal proxy error",
+                    "_http_status": 500,
+                },
                 request_id=request_id,
             )
+
+    def _build_transport_response(self, upstream_response: Any) -> dict[str, Any]:
+        if upstream_response.is_json and isinstance(upstream_response.body, dict):
+            payload = dict(upstream_response.body)
+        else:
+            payload = {
+                "status": "success" if upstream_response.status_code < 400 else "error",
+                "body": upstream_response.body,
+            }
+
+        payload["_http_status"] = upstream_response.status_code
+        return payload

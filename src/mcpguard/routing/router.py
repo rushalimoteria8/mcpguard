@@ -16,6 +16,7 @@ class RouteTarget:
 
     url: str
     headers: dict[str, str]
+    method: str = "POST"
     path: str | None = None
 
 
@@ -78,11 +79,10 @@ class ToolRouter:
                 continue
 
             tool_name = env_key[len(self.env_prefix) :].lower()
-            tool_name = tool_name.replace("__", "/")
-            tool_name = tool_name.replace("_", "-")
             normalized_routes[tool_name] = RouteTarget(
                 url=env_value,
                 headers={},
+                method="POST",
                 path=None,
             )
 
@@ -98,6 +98,7 @@ class ToolRouter:
 
               github_write:
                 url: "https://github.internal"
+                method: "POST"
                 path: "/write"
                 headers:
                   x-service: "github"
@@ -122,6 +123,12 @@ class ToolRouter:
                 f"INVALID_ROUTE_CONFIG:{tool_name}: 'path' must be a string if provided"
             )
 
+        method = route_config.get("method", "POST")
+        if not isinstance(method, str) or not method.strip():
+            raise RoutingError(
+                f"INVALID_ROUTE_CONFIG:{tool_name}: 'method' must be a non-empty string"
+            )
+
         headers = route_config.get("headers", {})
         if not isinstance(headers, dict):
             raise RoutingError(
@@ -143,5 +150,6 @@ class ToolRouter:
         return RouteTarget(
             url=url,
             headers=copy.deepcopy(normalized_headers),
+            method=method.strip().upper(),
             path=path,
         )
