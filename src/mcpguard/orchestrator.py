@@ -10,12 +10,13 @@ class MCPGuardProxy:
     The Orchestrator (The Boss).
     Coordinates the flow of data between Transport, Security, Routing, and Telemetry.
     """
-    def __init__(self, transport, validator, router, upstream_client):
+    def __init__(self, transport, validator, router, upstream_client, redactor):
         # The Boss takes its tools via Dependency Injection
         self.transport = transport
         self.validator = validator
         self.router = router
         self.upstream_client = upstream_client
+        self.redactor = redactor
         self._background_tasks: set[asyncio.Task] = set()
 
     async def run(self):
@@ -65,17 +66,16 @@ class MCPGuardProxy:
             # route the request to correct upstream client
             target = await self.router.resolve(request)
             upstream_response = await self.upstream_client.forward(target, request)
-            raw_data = self._build_transport_response(upstream_response)
 
-            # --- STEP 4: Clean (Block B: Redactor) ---
-            # TODO: Replace with streaming regex redactor
-            clean_data = raw_data
+            # response redactor
+            clean_envelope = await self.redactor.redact(upstream_response)
+            clean_data = self._build_transport_response(clean_envelope)
 
             # --- STEP 5: Log (Block D: Telemetry) ---
             # TODO: Replace with async background queue
             print("Transaction logged.")
 
-            # --- STEP 6: Send (Block A: Transport) ---
+            # sending response back to AI agent
             await self.transport.send_response(clean_data, request_id=request_id)
 
         except RoutingError as exc:
