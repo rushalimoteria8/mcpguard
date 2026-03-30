@@ -44,6 +44,7 @@ class ResponseRedactor:
         *,
         secret_patterns: dict[str, Pattern[str]] | None = None,
         sensitive_keys: set[str] | frozenset[str] | None = None,
+        redaction_rules: list[Any] | None = None,
     ) -> None:
         self.secret_patterns = dict(secret_patterns or self.DEFAULT_SECRET_PATTERNS)
         self.sensitive_keys = {
@@ -51,6 +52,7 @@ class ResponseRedactor:
             for key in (sensitive_keys or self.DEFAULT_SENSITIVE_KEYS)
             if isinstance(key, str) and key.strip()
         }
+        self._load_config_patterns(redaction_rules or [])
 
     async def redact(self, envelope: ResponseEnvelope) -> ResponseEnvelope:
         """Return a new envelope with sensitive content scrubbed."""
@@ -91,3 +93,27 @@ class ResponseRedactor:
         for pattern in self.secret_patterns.values():
             scrubbed = pattern.sub(self.SECRET_REPLACEMENT, scrubbed)
         return scrubbed
+
+    def _load_config_patterns(self, redaction_rules: list[Any]) -> None:
+        for index, rule in enumerate(redaction_rules):
+            if isinstance(rule, str):
+                pattern_text = rule.strip()
+                if not pattern_text:
+                    continue
+                pattern_name = f"config_rule_{index}"
+                self.secret_patterns[pattern_name] = re.compile(pattern_text)
+                continue
+
+            if isinstance(rule, dict):
+                if rule.get("enabled", True) is False:
+                    continue
+
+                pattern_text = rule.get("pattern")
+                if not isinstance(pattern_text, str) or not pattern_text.strip():
+                    continue
+
+                pattern_name = rule.get("name")
+                if not isinstance(pattern_name, str) or not pattern_name.strip():
+                    pattern_name = f"config_rule_{index}"
+
+                self.secret_patterns[pattern_name] = re.compile(pattern_text)

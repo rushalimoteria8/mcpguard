@@ -21,7 +21,7 @@ class MCPGuardProxy:
 
     async def run(self):
         """The main 6-step asynchronous event loop."""
-        print("MCPGuard Orchestrator started. Listening for requests...")
+        logging.info("MCPGuard Orchestrator started. Listening for requests...")
         await self.transport.start()
 
         try:
@@ -32,7 +32,7 @@ class MCPGuardProxy:
                     
                     # Secret escape hatch for testing in the terminal
                     if request_id is None and isinstance(request, dict) and request.get("tool") == "exit":
-                        print("Shutting down MCPGuard...")
+                        logging.info("Shutting down MCPGuard...")
                         break
                     
                     # creating independent workers to handle each request concurrently
@@ -53,10 +53,18 @@ class MCPGuardProxy:
 
     async def process_request(self, request_id: Any | None, request: dict) -> None:
         try:
+            agent_id = request.get("agent_id")
+            if not isinstance(agent_id, str) or not agent_id.strip():
+                await self.transport.send_response(
+                    {"error": "MALFORMED_REQUEST", "status": "blocked"},
+                    request_id=request_id,
+                )
+                return
+
             #Security block: validation of the request
-            is_safe, message = self.validator.validate(request, agent_id="admin_agent")
+            is_safe, message = self.validator.validate(request, agent_id=agent_id)
             if not is_safe:
-                print(f"Blocked Request: {message}")
+                logging.warning("Blocked request: %s", message)
                 await self.transport.send_response(
                     {"error": message, "status": "blocked"},
                     request_id=request_id,
@@ -73,7 +81,7 @@ class MCPGuardProxy:
 
             # --- STEP 5: Log (Block D: Telemetry) ---
             # TODO: Replace with async background queue
-            print("Transaction logged.")
+            logging.info("Transaction logged.")
 
             # sending response back to AI agent
             await self.transport.send_response(clean_data, request_id=request_id)

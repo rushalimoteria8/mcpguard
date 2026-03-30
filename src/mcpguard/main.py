@@ -1,4 +1,5 @@
 import sys
+import logging
 from routing import ToolRouter, UpstreamClient
 from security.policy_loader import PolicyLoader
 from security.response_redactor import ResponseRedactor
@@ -20,12 +21,13 @@ Sequence for
 async def main():
     loader = PolicyLoader("policy.yaml")
     if not loader.load():
-        print(f"\n[!] Policy load failed: {loader.last_error}")
+        logging.error("Policy load failed: %s", loader.last_error)
         sys.exit(1)
 
     security_rules = loader.get_security_rules()
     transport_rules = loader.get_transport_rules()
     routing_rules = loader.get_routing_rules()
+    redaction_rules = loader.get_redaction_rules()
 
     #validator object initialisation
     validator = RequestValidator(
@@ -33,7 +35,7 @@ async def main():
         agent_permissions=security_rules["agent_permissions"],
         tool_schemas=security_rules["tool_schemas"]
     )
-    print(f"Validator initialised. Sandbox locked to: {validator.workspace_root}")
+    logging.info("Validator initialised. Sandbox locked to: %s", validator.workspace_root)
 
     transport_type = transport_rules["type"]
     if transport_type == "stdio":
@@ -45,12 +47,12 @@ async def main():
             request_timeout_seconds=transport_rules["request_timeout_seconds"],
         )
     else:
-        print(f"\n[!] Unsupported transport type: {transport_type}")
+        logging.error("Unsupported transport type: %s", transport_type)
         sys.exit(1)
 
     router = ToolRouter(routing_rules)
     upstream_client = UpstreamClient()
-    redactor = ResponseRedactor()
+    redactor = ResponseRedactor(redaction_rules=redaction_rules)
 
     proxy = MCPGuardProxy(
         transport=transport,
@@ -64,4 +66,5 @@ async def main():
 
 if __name__ == "__main__":
     import asyncio
+    logging.basicConfig(level=logging.INFO)
     asyncio.run(main())

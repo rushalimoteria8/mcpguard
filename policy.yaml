@@ -3,6 +3,17 @@ workspace_root: "./test_sandbox"
 transport:
   type: stdio
 
+routing_endpoints:
+  read_file:
+    url: "http://127.0.0.1:3001"
+    method: "POST"
+  write_file:
+    url: "http://127.0.0.1:3002"
+    method: "POST"
+
+redaction_patterns:
+  - "ghp_[A-Za-z0-9]{20,}"
+
 agent_permissions:
   admin_agent:
     - write_file
