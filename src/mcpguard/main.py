@@ -1,9 +1,11 @@
 import sys
 import logging
+import asyncio
 from routing import ToolRouter, UpstreamClient
 from security.policy_loader import PolicyLoader
 from security.response_redactor import ResponseRedactor
 from security.request_validator import RequestValidator
+from telemetry import AuditLogger, BackgroundFlusher
 from transport import HttpTransport, StdioTransport
 from orchestrator import MCPGuardProxy
 
@@ -53,6 +55,9 @@ async def main():
     router = ToolRouter(routing_rules)
     upstream_client = UpstreamClient()
     redactor = ResponseRedactor(redaction_rules=redaction_rules)
+    telemetry_queue: asyncio.Queue[dict[str, object] | object] = asyncio.Queue()
+    audit_logger = AuditLogger(telemetry_queue)
+    background_flusher = BackgroundFlusher(telemetry_queue)
 
     proxy = MCPGuardProxy(
         transport=transport,
@@ -60,11 +65,12 @@ async def main():
         router=router,
         upstream_client=upstream_client,
         redactor=redactor,
+        audit_logger=audit_logger,
+        background_flusher=background_flusher,
     )
     
     await proxy.run()
 
 if __name__ == "__main__":
-    import asyncio
     logging.basicConfig(level=logging.INFO)
     asyncio.run(main())

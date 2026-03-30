@@ -23,7 +23,7 @@ class AuditLogger:
     completed events onto the shared queue for the background flusher.
     """
 
-    def __init__(self, queue: asyncio.Queue[dict[str, Any]]) -> None:
+    def __init__(self, queue: asyncio.Queue[dict[str, Any] | object]) -> None:
         self.queue = queue
         self._active_requests: dict[str, _ActiveRequest] = {}
 
