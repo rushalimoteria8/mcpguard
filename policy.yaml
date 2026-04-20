@@ -25,7 +25,11 @@ allowed_tools:
   read_file:
     arguments:
       file_path: string
+    path_fields:
+      - file_path
   write_file:
     arguments:
       file_path: string
       content: string
+    path_fields:
+      - file_path

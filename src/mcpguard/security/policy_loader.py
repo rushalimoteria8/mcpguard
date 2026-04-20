@@ -275,7 +275,8 @@ class PolicyLoader:
             if not isinstance(tool_name, str) or not tool_name.strip():
                 raise TypeError("Each routing endpoint key must be a non-empty string.")
 
-            #todo: check later
+            # Keep route config flexible for now; ToolRouter performs the deeper
+            # normalization and validation of fields like url/method/path/headers.
             if not isinstance(endpoint, (str, dict)):
                 raise TypeError(
                     f"Routing endpoint for tool '{tool_name}' must be a string or dictionary."
@@ -283,7 +284,8 @@ class PolicyLoader:
 
     def _validate_redaction_patterns(self, redaction_patterns: list[Any]) -> None:
         for idx, pattern in enumerate(redaction_patterns):
-            #todo: check later
+            # Keep this flexible for now so policy-driven redaction can evolve
+            # without forcing a strict schema before all rule shapes are finalized.
             if not isinstance(pattern, (str, dict)):
                 raise TypeError(
                     f"Redaction pattern at index {idx} must be a string or dictionary."
@@ -294,7 +296,8 @@ class PolicyLoader:
             if not isinstance(scope, str) or not scope.strip():
                 raise TypeError("Each 'rate_limits' key must be a non-empty string.")
 
-            #todo: check later
+            # Rate limiting is not enforced yet; for now we only preserve a
+            # dictionary-shaped config so concrete limiter rules can be added later.
             if not isinstance(rule, dict):
                 raise TypeError(f"Rate limit rule for '{scope}' must be a dictionary.")
 
