@@ -10,3 +10,7 @@
 {"timestamp":"2026-04-20T19:07:03.838833+00:00","request_id":"req-0eba42d7da9e4f5082a3a1cc9b20e7aa","agent_id":"admin_agent","target_tool":"read_file","status_code":403,"error_message":"PATH_TRAVERSAL","latency_ms":0.139}
 {"timestamp":"2026-04-20T19:07:03.841199+00:00","request_id":"req-6f10aa2ad3a54192a127acbe11893898","agent_id":"admin_agent","target_tool":"write_file","status_code":200,"error_message":null,"latency_ms":1.714}
 {"timestamp":"2026-04-20T19:07:03.842674+00:00","request_id":"req-70008b07b0054e06aa1ea508ff957f62","agent_id":"admin_agent","target_tool":"read_file","status_code":200,"error_message":null,"latency_ms":0.717}
+{"timestamp":"2026-05-04T17:58:27.830316+00:00","request_id":"req-5f31bc6222ff4f97b4a56a869cf332d0","agent_id":"guest_agent","target_tool":"write_file","status_code":403,"error_message":"RBAC_DENIED","latency_ms":0.249}
+{"timestamp":"2026-05-04T17:58:27.831982+00:00","request_id":"req-39ea8cc34dd541a983bc75fa25cb40a1","agent_id":"admin_agent","target_tool":"read_file","status_code":403,"error_message":"PATH_TRAVERSAL","latency_ms":0.337}
+{"timestamp":"2026-05-04T17:58:27.836317+00:00","request_id":"req-c1f7dc7fa6a746c0ba26cb45357195c5","agent_id":"admin_agent","target_tool":"write_file","status_code":200,"error_message":null,"latency_ms":3.129}
+{"timestamp":"2026-05-04T17:58:27.837753+00:00","request_id":"req-a3f4ecfa15b142d8a481d31903c63f6e","agent_id":"admin_agent","target_tool":"read_file","status_code":200,"error_message":null,"latency_ms":0.651}
